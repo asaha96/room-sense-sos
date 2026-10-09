@@ -9,7 +9,7 @@ class IncidentCodeGeneratorTest {
     @Test
     fun alphabetDropsAmbiguousCharacters() {
         val alphabet = IncidentCodeGenerator.ALPHABET
-        assertEquals(32, alphabet.length)
+        assertEquals(31, alphabet.length)
         assertTrue('0' !in alphabet)
         assertTrue('O' !in alphabet)
         assertTrue('1' !in alphabet)

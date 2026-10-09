@@ -7,7 +7,7 @@ import kotlin.random.Random
  * The alphabet drops 0/O and 1/I/L.
  */
 object IncidentCodeGenerator {
-    const val ALPHABET: String = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    const val ALPHABET: String = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
     const val DEFAULT_LENGTH: Int = 6
 
     fun generate(length: Int = DEFAULT_LENGTH, random: Random = Random.Default): String {

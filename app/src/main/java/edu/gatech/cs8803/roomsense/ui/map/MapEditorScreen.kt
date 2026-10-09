@@ -201,8 +201,8 @@ private fun FloorCanvas(
                     val handle = with(density) { 28.dp.toPx() }
                     awaitEachGesture {
                         val down = awaitFirstDown()
-                        val width = size.width
-                        val height = size.height
+                        val width = size.width.toFloat()
+                        val height = size.height.toFloat()
                         if (width <= 0f || height <= 0f) return@awaitEachGesture
                         val current = draftState.value
                         val selected = current.find { it.id == selectedRef.value }
@@ -220,7 +220,7 @@ private fun FloorCanvas(
                             val event = awaitPointerEvent()
                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
                             if (!change.pressed) break
-                            val delta = change.positionChange()
+                            val delta = change.position - change.previousPosition
                             if (target != null && (abs(delta.x) > 0.5f || abs(delta.y) > 0.5f)) {
                                 moved = true
                                 dragging.value = true
