@@ -4,25 +4,61 @@ Android app for Georgia Tech CS 8803 (Mobile Computing and IoT). A person in tro
 
 The phone learns rooms by Wi-Fi fingerprinting. During an incident it keeps estimating the room, opens a local-only hotspot, advertises the incident over BLE, and serves an offline web page with the floor map. There is no iOS target.
 
-## Build
+## Build and run locally
 
-Requirements: JDK 17 or newer, Android SDK platform 34, build-tools 34.0.0.
+### Prerequisites
+
+- **JDK 17 or newer.** The app compiles with Java 17 language level. JDK 21 works. Check with `java -version`.
+- **Android SDK**, from [Android Studio](https://developer.android.com/studio) or the command-line tools. You need:
+  - Android SDK Platform 34 (`platforms;android-34`)
+  - Build-tools 34.0.0 (`build-tools;34.0.0`)
+  - Platform-tools (`adb` is in there)
+- `ANDROID_HOME` (or `ANDROID_SDK_ROOT`) pointing at the SDK. Android Studio’s default is `~/Android/Sdk` on Linux, `~/Library/Android/sdk` on macOS.
+
+The project is minSdk 26, targetSdk 34, compileSdk 34. Kotlin, Jetpack Compose, Room, and a small embedded HTTP server (no NanoHTTPD dependency). Unit tests cover kNN, the incident-code alphabet, the BLE payload, and the Wi-Fi QR string.
+
+`local.properties` is gitignored. Do not commit it, the SDK, `.gradle/`, or `app/build/`.
+
+### Build
 
 ```bash
-export ANDROID_HOME="$HOME/android-sdk"   # or wherever the SDK lives
+export ANDROID_HOME="$HOME/Android/Sdk"   # or wherever the SDK lives
 echo "sdk.dir=$ANDROID_HOME" > local.properties
 ./gradlew testDebugUnitTest assembleDebug
 ```
 
-`local.properties` is gitignored. Debug APK:
+`assembleDebug` is enough for an installable APK. The test task is the same suite CI-style local check. Debug APK:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-- minSdk 26, targetSdk 34, compileSdk 34
-- Kotlin, Jetpack Compose, Room, a small embedded HTTP server (no NanoHTTPD dependency)
-- Unit tests cover kNN, the incident-code alphabet, the BLE payload, and the Wi-Fi QR string
+### Install on a physical Android phone
+
+Turn on Developer options and USB debugging. Plug the phone in (or use wireless debugging) and accept the RSA prompt.
+
+```bash
+adb devices
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+`-r` replaces an existing debug install and keeps its data. Open **Room Sense SOS**, grant location, nearby Wi-Fi, notifications, and Bluetooth, and turn system Location on. Real Wi-Fi scans, the local-only hotspot, and BLE advertise/scan all need this phone. Survey a building only on hardware.
+
+### Emulator
+
+An emulator can install the APK and walk the UI, including demo mode and the in-app page preview. These radios are not available there, so those features will not work:
+
+- **Wi-Fi scans.** `WifiManager.startScan()` / `getScanResults()` do not see real access points. Room estimates from a live scan stay empty.
+- **Hotspot.** `startLocalOnlyHotspot` fails. There is no system SSID or passphrase, and a second device cannot join the phone.
+- **BLE.** Advertising the incident and scanning for nearby incidents do not run. The Listen screen stays empty.
+
+Use demo mode for the rest of the flow (below). **Preview the page on this phone** still loads `http://127.0.0.1:<port>/` because the HTTP server does not need the hotspot.
+
+### Demo mode
+
+Settings → **Demo mode** replaces the radio with synthetic scans, so you never call `startScan`. **Load demo wing** replaces the map with four rooms (Atrium, Studio, Office, Corridor), each with four noisy fingerprints, and turns demo mode on.
+
+**Standing in** chooses which centroid the next fake scan is drawn from. Change it during an SOS and the responder page follows within a few seconds. If the hotspot fails while demo mode is on (the usual emulator result), the SOS screen shows a simulated `ROOMSENSE-SOS` / `sense-sos` network and still serves the page. The class demo script below has a short emulator path.
 
 ## Architecture
 
