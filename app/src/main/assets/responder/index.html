@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Room Sense SOS</title>
+<style>
+  :root {
+    --ink: #12171c;
+    --raised: #1c242c;
+    --paper: #f4efe6;
+    --dim: #c9c2b6;
+    --gold: #c6a15b;
+    --moss: #8fcbb0;
+    --signal: #e23b2f;
+    --line: #33404c;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--ink); color: var(--paper); }
+  body {
+    font-family: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+    min-height: 100vh;
+    padding: 28px 20px 48px;
+  }
+  header { max-width: 980px; margin: 0 auto 20px; }
+  .eyebrow {
+    color: var(--gold);
+    letter-spacing: 0.16em;
+    font-size: 12px;
+    font-weight: 650;
+    margin: 0 0 8px;
+  }
+  h1 { font-size: 28px; font-weight: 620; margin: 0; letter-spacing: -0.03em; }
+  .sub { color: var(--dim); margin: 8px 0 0; line-height: 1.45; }
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    display: grid;
+    gap: 16px;
+  }
+  @media (min-width: 840px) {
+    main { grid-template-columns: 300px 1fr; align-items: start; }
+  }
+  .card {
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 18px;
+  }
+  .label { color: var(--dim); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 8px; }
+  .code {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 40px;
+    letter-spacing: 0.12em;
+    margin: 0;
+    word-break: break-word;
+  }
+  .room { font-size: 28px; margin: 0; letter-spacing: -0.03em; }
+  .meta { color: var(--dim); margin: 8px 0 0; line-height: 1.4; }
+  .live { color: var(--moss); font-weight: 650; }
+  .warn { color: var(--gold); }
+  .map-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: #0e1318;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .map-wrap img, .map-wrap svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .map-wrap img { object-fit: fill; }
+  .empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dim);
+    padding: 16px;
+    text-align: center;
+  }
+  footer {
+    max-width: 980px;
+    margin: 18px auto 0;
+    color: var(--dim);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+</style>
+</head>
+<body>
+<header>
+  <p class="eyebrow">ROOM SENSE SOS</p>
+  <h1>Responder</h1>
+  <p class="sub">This page is served by the caller's phone. It does not use the internet.</p>
+</header>
+<main>
+  <section class="card" id="facts">
+    <p class="label">Incident code</p>
+    <p class="code" id="code">······</p>
+    <p class="label" style="margin-top:18px">Room</p>
+    <p class="room" id="room">Waiting for the phone</p>
+    <p class="meta" id="confidence"></p>
+    <p class="meta"><span class="live" id="fresh">Connecting</span> · <span id="when">not yet</span></p>
+    <p class="meta warn" id="demo" hidden>Demo mode is on. Scans are simulated.</p>
+  </section>
+  <section class="card">
+    <p class="label">Floor</p>
+    <div class="map-wrap">
+      <img id="plan" alt="" hidden>
+      <svg id="map" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+      <div class="empty" id="empty">No rooms on the map yet.</div>
+    </div>
+  </section>
+</main>
+<footer id="foot">Join the hotspot shown on the caller's screen, then keep this page open. It refreshes on its own.</footer>
+<script>
+(function () {
+  var NS = "http://www.w3.org/2000/svg";
+  var latest = null;
+  var planLoaded = false;
+
+  function el(name, attrs) {
+    var node = document.createElementNS(NS, name);
+    Object.keys(attrs).forEach(function (key) { node.setAttribute(key, attrs[key]); });
+    return node;
+  }
+
+  function ago(ms) {
+    if (!ms) return "not yet";
+    var seconds = Math.max(0, Math.round((Date.now() - ms) / 1000));
+    if (seconds < 5) return "just now";
+    if (seconds < 60) return seconds + "s ago";
+    if (seconds < 3600) return Math.floor(seconds / 60) + "m ago";
+    return Math.floor(seconds / 3600) + "h ago";
+  }
+
+  function paintClock() {
+    if (!latest) return;
+    document.getElementById("when").textContent = ago(latest.updatedAt);
+  }
+
+  function paint(data) {
+    latest = data;
+    var code = (data.incidentCode || "").split("").join(" ");
+    document.getElementById("code").textContent = code || "······";
+    document.getElementById("room").textContent = data.roomName || "Still estimating";
+    var pct = Math.round((data.confidence || 0) * 100);
+    document.getElementById("confidence").textContent = data.roomName
+      ? pct + "% confidence"
+      : "The phone has not matched a surveyed room yet.";
+    document.getElementById("fresh").textContent = "Live";
+    document.getElementById("demo").hidden = !data.demoMode;
+    paintClock();
+
+    var img = document.getElementById("plan");
+    if (data.hasFloorPlan) {
+      if (!planLoaded) {
+        img.src = "/floorplan";
+        planLoaded = true;
+      }
+      img.hidden = false;
+    } else {
+      img.hidden = true;
+    }
+
+    var svg = document.getElementById("map");
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var rooms = data.rooms || [];
+    document.getElementById("empty").style.display = rooms.length ? "none" : "flex";
+    rooms.forEach(function (room) {
+      var here = room.id && room.id === data.roomId;
+      svg.appendChild(el("rect", {
+        x: room.x * 100,
+        y: room.y * 100,
+        width: room.w * 100,
+        height: room.h * 100,
+        rx: 1.6,
+        fill: room.color || "#6e8ca0",
+        "fill-opacity": here ? "0.9" : "0.45",
+        stroke: here ? "#f4efe6" : room.color || "#6e8ca0",
+        "stroke-width": here ? "1.1" : "0.4"
+      }));
+      var label = el("text", {
+        x: room.x * 100 + 1.5,
+        y: room.y * 100 + 5,
+        fill: "#f4efe6",
+        "font-size": "3.4",
+        "font-family": "ui-sans-serif, system-ui, sans-serif"
+      });
+      label.textContent = room.name || "";
+      svg.appendChild(label);
+    });
+  }
+
+  function fail() {
+    document.getElementById("fresh").textContent = "Waiting for the phone";
+  }
+
+  function poll() {
+    fetch("/api/status", { cache: "no-store" })
+      .then(function (res) { if (!res.ok) throw new Error("status"); return res.json(); })
+      .then(paint)
+      .catch(fail);
+  }
+
+  poll();
+  setInterval(poll, 2000);
+  setInterval(paintClock, 1000);
+})();
+</script>
+</body>
+</html>
