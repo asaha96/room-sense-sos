@@ -215,6 +215,14 @@ private fun LocationCard(viewModel: HomeViewModel, session: SosSnapshot) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Estimated room", color = PaperDim, style = MaterialTheme.typography.labelLarge)
             when {
+                session.active && session.roomName != null -> {
+                    Text(session.roomName, style = MaterialTheme.typography.headlineMedium)
+                    Text(
+                        "${confidencePercent(session.confidence)} confidence",
+                        color = Moss,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
                 viewModel.sampleCount == 0 -> {
                     Text("No fingerprints yet", style = MaterialTheme.typography.headlineSmall)
                     Text(
