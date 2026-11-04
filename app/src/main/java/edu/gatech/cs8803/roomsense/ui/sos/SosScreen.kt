@@ -45,8 +45,6 @@ import edu.gatech.cs8803.roomsense.ui.theme.Paper
 import edu.gatech.cs8803.roomsense.ui.theme.PaperDim
 import edu.gatech.cs8803.roomsense.ui.theme.Signal
 
-private val COMMON_GATEWAYS = listOf("192.168.43.1", "192.168.49.1")
-
 @Composable
 fun SosScreen(
     session: SosSession,
@@ -58,18 +56,9 @@ fun SosScreen(
     val clipboard = LocalClipboardManager.current
     var copied by remember { mutableStateOf<String?>(null) }
     val code = state.code
-    val urls = run {
-        val port = state.port
-        if (port == null) {
-            emptyList<String>() to emptyList()
-        } else {
-            val detected = state.detectedHosts.map { "http://$it:$port/" }
-            val guesses = COMMON_GATEWAYS
-                .filter { host -> state.detectedHosts.none { it == host } }
-                .map { "http://$it:$port/" }
-            detected to guesses
-        }
-    }
+    val port = state.port
+    val mapUrls = if (port == null || state.simulatedHotspot) emptyList() else
+        state.hotspotHosts.map { "http://$it:$port/" }
 
     Column(
         modifier = Modifier
@@ -130,7 +119,7 @@ fun SosScreen(
         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    if (state.simulatedHotspot) "Simulated hotspot" else "Hotspot",
+                    if (state.simulatedHotspot) "1. Join hotspot (simulated)" else "1. Join hotspot",
                     color = PaperDim,
                     style = MaterialTheme.typography.labelLarge,
                 )
@@ -159,26 +148,34 @@ fun SosScreen(
             }
         }
 
-        if (urls.first.isNotEmpty()) {
-            Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Responder page", color = PaperDim, style = MaterialTheme.typography.labelLarge)
-                    Text(
-                        "After someone joins the hotspot, they open one of these. The page is served by this phone and does not use the internet.",
-                        color = PaperDim,
-                    )
-                    urls.first.forEach { url ->
-                        Text(url, fontFamily = CodeFamily, modifier = Modifier.fillMaxWidth())
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("2. Open map", color = PaperDim, style = MaterialTheme.typography.labelLarge)
+                Text(
+                    "On the responder phone, join the hotspot above first, then scan this QR code to open the map. Stay connected even if Android says there is no internet.",
+                    color = PaperDim,
+                )
+                if (mapUrls.size == 1) {
+                    QrImage(payload = mapUrls.single(), contentDescription = "Open map QR code")
+                }
+                when {
+                    state.simulatedHotspot -> Text("A simulated hotspot cannot connect another phone. Use the preview below.", color = PaperDim)
+                    port == null -> Text("Starting the responder page…", color = PaperDim)
+                    mapUrls.isEmpty() -> Text("Waiting for the hotspot address…", color = PaperDim)
+                    mapUrls.size > 1 -> Text("Multiple hotspot addresses detected. Scan the code for an address below.", color = PaperDim)
+                }
+                mapUrls.forEach { url ->
+                    if (mapUrls.size > 1) {
+                        QrImage(payload = url, contentDescription = "Open map at $url")
                     }
-                    if (urls.second.isNotEmpty()) {
-                        Text("If none of those open, try a common hotspot gateway:", color = PaperDim)
-                        urls.second.forEach { url -> Text(url, fontFamily = CodeFamily) }
-                    }
-                    val local = urls.first.firstOrNull { it.contains("127.0.0.1") }
-                    if (local != null) {
-                        Button(onClick = { onPreview(local) }, modifier = Modifier.fillMaxWidth()) {
-                            Text("Preview the page on this phone")
-                        }
+                    Text(url, fontFamily = CodeFamily, modifier = Modifier.fillMaxWidth())
+                }
+                if (mapUrls.isNotEmpty()) {
+                    Text("Or type the URL above into the responder phone’s browser. Check that the incident code matches $code. The map keeps updating without internet.", color = PaperDim)
+                }
+                if (port != null) {
+                    Button(onClick = { onPreview("http://127.0.0.1:$port/") }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Preview the page on this phone")
                     }
                 }
             }
