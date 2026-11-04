@@ -178,10 +178,18 @@ class SosForegroundService : Service() {
 
     private fun beginHotspot() {
         val demo = graph.settings.demoMode
+        val before = LocalAddresses.interfaces()
         hotspot.start(graph.settings.attemptFixedSsid) { result ->
             if (!running) return@start
             when (result) {
                 is HotspotStartResult.Running -> {
+                    scope.launch {
+                        while (isActive && running) {
+                            val hosts = LocalAddresses.hotspotHosts(before, LocalAddresses.interfaces())
+                            graph.session.update { it.copy(hotspotHosts = hosts) }
+                            delay(1_000L)
+                        }
+                    }
                     Log.i(TAG, "Hotspot ${result.ssid} fixed=${result.fixedSsidApplied}")
                     graph.session.update {
                         it.copy(
