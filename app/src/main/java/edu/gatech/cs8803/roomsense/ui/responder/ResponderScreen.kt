@@ -1,5 +1,11 @@
 package edu.gatech.cs8803.roomsense.ui.responder
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,8 +28,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,6 +41,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.gatech.cs8803.roomsense.data.ble.NearbyIncident
 import edu.gatech.cs8803.roomsense.di.AppGraph
 import edu.gatech.cs8803.roomsense.di.viewModelFactory
+import edu.gatech.cs8803.roomsense.ui.RuntimePermissions
 import edu.gatech.cs8803.roomsense.ui.ago
 import edu.gatech.cs8803.roomsense.ui.theme.CodeFamily
 import edu.gatech.cs8803.roomsense.ui.theme.Gold
@@ -49,6 +60,32 @@ fun ResponderScreen(
     viewModel: ResponderViewModel,
     onBack: () -> Unit,
 ) {
+    val context = LocalContext.current
+    var permissionDenied by rememberSaveable { mutableStateOf(false) }
+    var permissionRequestPending by rememberSaveable { mutableStateOf(false) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) {
+        permissionRequestPending = false
+        permissionDenied = RuntimePermissions.missingForListening(context).isNotEmpty()
+        if (!permissionDenied) viewModel.startListening()
+    }
+    val settingsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        permissionDenied = RuntimePermissions.missingForListening(context).isNotEmpty()
+        if (!permissionDenied) viewModel.startListening()
+    }
+    val listen: () -> Unit = {
+        val missing = RuntimePermissions.missingForListening(context)
+        if (missing.isEmpty()) {
+            permissionDenied = false
+            viewModel.startListening()
+        } else {
+            permissionRequestPending = true
+            permissionLauncher.launch(missing.toTypedArray())
+        }
+    }
     val incidents by viewModel.incidents.collectAsStateWithLifecycle()
     LaunchedEffect(viewModel.listening) {
         while (viewModel.listening) {
@@ -82,7 +119,25 @@ fun ResponderScreen(
         if (viewModel.listening) {
             OutlinedButton(onClick = viewModel::toggle, modifier = Modifier.fillMaxWidth()) { Text("Stop listening") }
         } else {
-            Button(onClick = viewModel::toggle, modifier = Modifier.fillMaxWidth()) { Text("Listen for SOS") }
+            Button(onClick = listen, enabled = !permissionRequestPending, modifier = Modifier.fillMaxWidth()) {
+                Text(if (permissionDenied) "Retry permission request" else "Listen for SOS")
+            }
+            if (permissionDenied) {
+                Text(
+                    if (Build.VERSION.SDK_INT >= 31) {
+                        "Nearby devices permission is needed to find SOS beacons over Bluetooth. Retry to grant access. If no dialog appears, open app settings and allow Nearby devices."
+                    } else {
+                        "Location permission is needed for Bluetooth scanning on this Android version. Retry to grant access. If no dialog appears, open app settings and allow Location."
+                    },
+                    color = PaperDim,
+                )
+                OutlinedButton(onClick = {
+                    settingsLauncher.launch(Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", context.packageName, null),
+                    ))
+                }, modifier = Modifier.fillMaxWidth()) { Text("Open app settings") }
+            }
         }
         if (incidents.isEmpty()) {
             Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface) {

@@ -23,9 +23,14 @@ class ResponderViewModel(graph: AppGraph) : ViewModel() {
             listening = false
             status = "Stopped."
         } else {
-            status = scanner.start()
-            listening = status.startsWith("Listening")
+            startListening()
         }
+    }
+
+    fun startListening() {
+        if (listening) return
+        status = scanner.start()
+        listening = status.startsWith("Listening")
     }
 
     fun prune() = scanner.prune()
