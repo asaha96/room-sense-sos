@@ -142,7 +142,7 @@ Real phones, about ten minutes:
 4. Hold the SOS button until the ring closes.
 5. Read the six-character code as if you were on the phone with 911. The alphabet has no 0/O or 1/I/L.
 6. On phone B or a laptop, join the Wi-Fi network printed under the code. The password is next to it, or scan the QR code.
-7. Open one of the responder URLs on the SOS screen. You should see the same code, the floor with that room highlighted, the confidence, and a last-updated time. The page polls `/api/status` every two seconds. `GET /api/status` is the JSON form.
+7. After joining the hotspot, scan **2. Open map** on phone A with phone B to open the responder page. If scanning is unavailable, type the URL printed below that QR code. Stay connected to the hotspot even if Android reports no internet. You should see the same code, the floor with that room highlighted, the confidence, and a last-updated time. The page polls `/api/status` every two seconds. `GET /api/status` is the JSON form.
 8. Optional: on phone B open **Listen**, start listening, and confirm the BLE card shows the code, room, and hotspot name. Then join that network for the map. Legacy advertisements put the SSID in the scan response because a 31-byte packet cannot hold a long AndroidShare name plus the room.
 
 Emulator or a single phone:
@@ -157,7 +157,7 @@ Emulator or a single phone:
 
 Served by the phone on port 8088, or the next free port. Bound to all interfaces. HTML, CSS, and JS are one asset file. No CDN, no webfonts. The floor image, if you imported one, is `GET /floorplan`.
 
-Common local-only hotspot gateways are `192.168.43.1` and `192.168.49.1`. The screen lists the addresses the phone can actually see, plus those two if they are missing, because the hotspot interface sometimes shows up late.
+Common local-only hotspot gateways are `192.168.43.1` and `192.168.49.1`. The SOS screen refreshes the hotspot interface address while the incident runs. **1. Join hotspot** contains the Wi-Fi QR code; **2. Open map** contains the detected hotspot URL and actual server port, with the written URL as a fallback. It waits for a detected Wi-Fi hotspot interface rather than encoding a guessed gateway or the caller-only loopback preview address. If the device exposes multiple candidate hotspot addresses, each gets its own QR code and written URL.
 
 ## BLE
 

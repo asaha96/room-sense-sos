@@ -18,6 +18,7 @@ data class SosSnapshot(
     val simulatedHotspot: Boolean = false,
     val bleNote: String = "",
     val port: Int? = null,
+    val hotspotHosts: List<String> = emptyList(),
     val detectedHosts: List<String> = emptyList(),
     val scanNote: String = "",
     val updatedAt: Long = 0L,
