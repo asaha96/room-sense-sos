@@ -7,6 +7,16 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 
 object RuntimePermissions {
+    fun requiredForListening(sdk: Int = Build.VERSION.SDK_INT): List<String> =
+        if (sdk >= 31) listOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT,
+        ) else listOf(Manifest.permission.ACCESS_FINE_LOCATION)
+
+    fun missingForListening(context: Context): List<String> = requiredForListening().filter {
+        ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+    }
+
     fun missing(context: Context): List<String> {
         return required().filter {
             ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
