@@ -13,8 +13,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(0xFF12171C.toInt()),
-            navigationBarStyle = SystemBarStyle.dark(0xFF12171C.toInt()),
+            statusBarStyle = SystemBarStyle.light(0xFFF7F8FA.toInt(), 0xFF17212F.toInt()),
+            navigationBarStyle = SystemBarStyle.light(0xFFF7F8FA.toInt(), 0xFF17212F.toInt()),
         )
         val graph = roomSenseGraph
         setContent {

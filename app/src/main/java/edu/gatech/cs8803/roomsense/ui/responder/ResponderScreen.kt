@@ -6,6 +6,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,11 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -31,11 +28,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.gatech.cs8803.roomsense.data.ble.NearbyIncident
@@ -43,10 +40,14 @@ import edu.gatech.cs8803.roomsense.di.AppGraph
 import edu.gatech.cs8803.roomsense.di.viewModelFactory
 import edu.gatech.cs8803.roomsense.ui.RuntimePermissions
 import edu.gatech.cs8803.roomsense.ui.ago
-import edu.gatech.cs8803.roomsense.ui.theme.CodeFamily
-import edu.gatech.cs8803.roomsense.ui.theme.Gold
+import edu.gatech.cs8803.roomsense.ui.components.ScreenHeader
+import edu.gatech.cs8803.roomsense.ui.theme.Action
 import edu.gatech.cs8803.roomsense.ui.theme.Moss
+import edu.gatech.cs8803.roomsense.ui.theme.Paper
 import edu.gatech.cs8803.roomsense.ui.theme.PaperDim
+import edu.gatech.cs8803.roomsense.ui.theme.RoomButtonShape
+import edu.gatech.cs8803.roomsense.ui.theme.roomButtonHeight
+import edu.gatech.cs8803.roomsense.ui.theme.roomOutlinedColors
 import kotlinx.coroutines.delay
 
 @Composable
@@ -103,24 +104,36 @@ fun ResponderScreen(
             .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-            }
-            Column(Modifier.weight(1f)) {
-                Text("Responder", style = MaterialTheme.typography.headlineMedium)
-                Text(viewModel.status, color = PaperDim)
-            }
-        }
+        ScreenHeader(title = "Responder", onBack = onBack)
         Text(
             "Listen for a phone that is already broadcasting an SOS. You still join its hotspot to see the floor map. The beacon carries the incident code, the room, and the network name.",
             color = PaperDim,
         )
+        val routineStatus = viewModel.status == "Not listening." ||
+            viewModel.status == "Stopped." ||
+            viewModel.status.startsWith("Listening")
+        if (!routineStatus) {
+            Text(viewModel.status, color = PaperDim, style = MaterialTheme.typography.bodySmall)
+        }
         if (viewModel.listening) {
-            OutlinedButton(onClick = viewModel::toggle, modifier = Modifier.fillMaxWidth()) { Text("Stop listening") }
+            OutlinedButton(
+                onClick = viewModel::toggle,
+                modifier = Modifier.fillMaxWidth().roomButtonHeight(),
+                shape = RoomButtonShape,
+                border = BorderStroke(1.dp, Action),
+                colors = roomOutlinedColors(),
+            ) { Text("Stop listening") }
         } else {
-            Button(onClick = listen, enabled = !permissionRequestPending, modifier = Modifier.fillMaxWidth()) {
-                Text(if (permissionDenied) "Retry permission request" else "Listen for SOS")
+            Button(
+                onClick = listen,
+                enabled = !permissionRequestPending,
+                modifier = Modifier.fillMaxWidth().roomButtonHeight(),
+                shape = RoomButtonShape,
+            ) {
+                Text(
+                    if (permissionDenied) "Retry permission request" else "Listen for SOS",
+                    fontWeight = FontWeight.Bold,
+                )
             }
             if (permissionDenied) {
                 Text(
@@ -131,12 +144,18 @@ fun ResponderScreen(
                     },
                     color = PaperDim,
                 )
-                OutlinedButton(onClick = {
-                    settingsLauncher.launch(Intent(
-                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                        Uri.fromParts("package", context.packageName, null),
-                    ))
-                }, modifier = Modifier.fillMaxWidth()) { Text("Open app settings") }
+                OutlinedButton(
+                    onClick = {
+                        settingsLauncher.launch(Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", context.packageName, null),
+                        ))
+                    },
+                    modifier = Modifier.fillMaxWidth().roomButtonHeight(),
+                    shape = RoomButtonShape,
+                    border = BorderStroke(1.dp, Action),
+                    colors = roomOutlinedColors(),
+                ) { Text("Open app settings") }
             }
         }
         if (incidents.isEmpty()) {
@@ -167,9 +186,10 @@ private fun IncidentCard(incident: NearbyIncident) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 incident.code.toCharArray().joinToString(" "),
-                fontFamily = CodeFamily,
-                fontWeight = FontWeight.Medium,
-                color = Gold,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 32.sp,
+                letterSpacing = 1.sp,
+                color = Paper,
             )
             Text(incident.room, style = MaterialTheme.typography.titleLarge)
             Text(

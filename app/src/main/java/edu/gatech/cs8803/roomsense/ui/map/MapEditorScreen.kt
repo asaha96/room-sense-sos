@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,11 +24,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -47,22 +44,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import edu.gatech.cs8803.roomsense.domain.model.RoomModel
+import edu.gatech.cs8803.roomsense.ui.components.ScreenHeader
+import edu.gatech.cs8803.roomsense.ui.theme.Action
+import edu.gatech.cs8803.roomsense.ui.theme.ActionDanger
 import edu.gatech.cs8803.roomsense.ui.theme.Gold
-import edu.gatech.cs8803.roomsense.ui.theme.Ink
 import edu.gatech.cs8803.roomsense.ui.theme.Line
+import edu.gatech.cs8803.roomsense.ui.theme.MapSurface
 import edu.gatech.cs8803.roomsense.ui.theme.Paper
 import edu.gatech.cs8803.roomsense.ui.theme.PaperDim
+import edu.gatech.cs8803.roomsense.ui.theme.RoomButtonShape
+import edu.gatech.cs8803.roomsense.ui.theme.RoomFieldShape
+import edu.gatech.cs8803.roomsense.ui.theme.White
+import edu.gatech.cs8803.roomsense.ui.theme.roomButtonHeight
+import edu.gatech.cs8803.roomsense.ui.theme.roomOutlinedColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
@@ -95,22 +100,30 @@ fun MapEditorScreen(
             .imePadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-            }
-            Column(Modifier.weight(1f)) {
-                Text("Floor", style = MaterialTheme.typography.headlineMedium)
-                Text("Drag a room to move it. Drag the corner to resize.", color = PaperDim)
-            }
-        }
+        ScreenHeader(
+            title = "Floor",
+            onBack = onBack,
+            subtitle = "Drag a room to move it. Drag the corner to resize.",
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = viewModel::addRoom) { Text("Add room") }
-            OutlinedButton(onClick = { picker.launch("image/*") }) { Text("Import plan") }
+            Button(
+                onClick = viewModel::addRoom,
+                modifier = Modifier.roomButtonHeight(),
+                shape = RoomButtonShape,
+            ) { Text("Add room", fontWeight = FontWeight.Bold) }
+            OutlinedButton(
+                onClick = { picker.launch("image/*") },
+                modifier = Modifier.roomButtonHeight(),
+                shape = RoomButtonShape,
+                border = BorderStroke(1.dp, Action),
+                colors = roomOutlinedColors(),
+            ) { Text("Import plan") }
             if (viewModel.floorPath != null) {
-                TextButton(onClick = viewModel::clearFloorPlan) { Text("Clear plan") }
+                TextButton(onClick = viewModel::clearFloorPlan) {
+                    Text("Clear plan", color = ActionDanger)
+                }
             }
         }
         FloorCanvas(
@@ -136,10 +149,16 @@ fun MapEditorScreen(
                 onValueChange = { nameDraft = it },
                 label = { Text("Room name") },
                 singleLine = true,
+                shape = RoomFieldShape,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = TextUnit.Unspecified),
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { viewModel.rename(selected.id, nameDraft) }) { Text("Rename") }
+                Button(
+                    onClick = { viewModel.rename(selected.id, nameDraft) },
+                    modifier = Modifier.roomButtonHeight(),
+                    shape = RoomButtonShape,
+                ) { Text("Rename", fontWeight = FontWeight.Bold) }
                 TextButton(onClick = {
                     viewModel.delete(selected.id)
                     selectedId = null
@@ -160,7 +179,7 @@ fun MapEditorScreen(
                 Text(
                     room.name,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
         }
@@ -191,7 +210,7 @@ private fun FloorCanvas(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(4f / 3f)
-            .border(1.dp, Line, RoundedCornerShape(18.dp))
+            .border(1.dp, Line, RoundedCornerShape(24.dp))
             .onSizeChanged { canvasSize = it },
     ) {
         Canvas(
@@ -251,10 +270,13 @@ private fun FloorCanvas(
                     }
                 },
         ) {
+            val roomCorner = 18.dp.toPx()
+            val selectedStroke = 3.dp.toPx()
+            val idleStroke = 1.5.dp.toPx()
             if (floor != null) {
                 drawImage(floor, dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()))
             } else {
-                drawRect(Ink)
+                drawRect(MapSurface)
                 val stepX = size.width / 8f
                 val stepY = size.height / 6f
                 for (index in 1 until 8) {
@@ -270,27 +292,30 @@ private fun FloorCanvas(
                 val w = room.width * size.width
                 val h = room.height * size.height
                 val color = Color(room.color)
+                val selected = room.id == selectedId
                 drawRoundRect(
-                    color = color.copy(alpha = if (room.id == selectedId) 0.78f else 0.5f),
+                    color = color.copy(alpha = if (selected) 1f else 0.92f),
                     topLeft = Offset(left, top),
                     size = androidx.compose.ui.geometry.Size(w, h),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(18f, 18f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(roomCorner, roomCorner),
                 )
                 drawRoundRect(
-                    color = if (room.id == selectedId) Gold else color,
+                    color = if (selected) Gold else color,
                     topLeft = Offset(left, top),
                     size = androidx.compose.ui.geometry.Size(w, h),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(18f, 18f),
-                    style = Stroke(
-                        width = if (room.id == selectedId) 4f else 2f,
-                        pathEffect = if (room.id == selectedId) null else PathEffect.dashPathEffect(floatArrayOf(10f, 8f)),
-                    ),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(roomCorner, roomCorner),
+                    style = Stroke(width = if (selected) selectedStroke else idleStroke),
                 )
-                if (room.id == selectedId) {
+                if (selected) {
+                    val handle = 14.dp.toPx()
+                    val handleTop = Offset(left + w - handle / 2f, top + h - handle / 2f)
+                    val handleSize = androidx.compose.ui.geometry.Size(handle, handle)
+                    drawRect(color = White, topLeft = handleTop, size = handleSize)
                     drawRect(
                         color = Paper,
-                        topLeft = Offset(left + w - 14f, top + h - 14f),
-                        size = androidx.compose.ui.geometry.Size(18f, 18f),
+                        topLeft = handleTop,
+                        size = handleSize,
+                        style = Stroke(width = 1.5.dp.toPx()),
                     )
                 }
             }
@@ -299,8 +324,8 @@ private fun FloorCanvas(
             if (canvasSize.width == 0) return@forEach
             Text(
                 room.name,
-                color = Paper,
-                fontWeight = FontWeight.Medium,
+                color = White,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .offset {
                         IntOffset(

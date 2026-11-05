@@ -2,10 +2,10 @@ package edu.gatech.cs8803.roomsense.domain.map
 
 object RoomPalette {
     private val colors = listOf(
-        0xFFC6A15B.toInt(),
-        0xFF3F8F8A.toInt(),
-        0xFFD4654A.toInt(),
-        0xFF6E8CA0.toInt(),
+        0xFF7C3A12.toInt(),
+        0xFF2A7570.toInt(),
+        0xFFE06A4F.toInt(),
+        0xFF6A8496.toInt(),
         0xFF8C6BB1.toInt(),
         0xFF4F7CAC.toInt(),
         0xFFC46B8A.toInt(),

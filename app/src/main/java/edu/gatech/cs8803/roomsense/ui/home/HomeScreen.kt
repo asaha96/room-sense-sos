@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,9 +51,13 @@ import edu.gatech.cs8803.roomsense.service.SosSnapshot
 import edu.gatech.cs8803.roomsense.ui.ago
 import edu.gatech.cs8803.roomsense.ui.components.HoldToActivateButton
 import edu.gatech.cs8803.roomsense.ui.confidencePercent
-import edu.gatech.cs8803.roomsense.ui.theme.Gold
+import edu.gatech.cs8803.roomsense.ui.theme.Action
 import edu.gatech.cs8803.roomsense.ui.theme.Moss
 import edu.gatech.cs8803.roomsense.ui.theme.PaperDim
+import edu.gatech.cs8803.roomsense.ui.theme.RoomChipShape
+import edu.gatech.cs8803.roomsense.ui.theme.roomFilterChipBorder
+import edu.gatech.cs8803.roomsense.ui.theme.roomFilterChipColors
+import edu.gatech.cs8803.roomsense.ui.theme.roomSwitchColors
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -74,60 +79,50 @@ fun HomeScreen(
             .statusBarsPadding()
             .navigationBarsPadding(),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 20.dp, end = 8.dp, top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    "ROOM SENSE",
-                    color = Gold,
-                    style = MaterialTheme.typography.labelLarge,
-                    letterSpacing = 2.sp,
-                )
-                Text("Find the room. Then call.", style = MaterialTheme.typography.headlineMedium)
-            }
-            IconButton(onClick = { showSettings = true }) {
-                Icon(Icons.Outlined.Settings, contentDescription = "Settings")
-            }
-        }
-
         BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
         ) {
             if (maxWidth >= 720.dp) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        LocationCard(viewModel, session)
-                        ActionRow(onSurvey, onMap, onResponder)
+                Column(Modifier.fillMaxSize()) {
+                    HomeHeader(onSettings = { showSettings = true })
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            LocationCard(viewModel, session)
+                            ActionRow(onSurvey, onMap, onResponder)
+                        }
+                        Spacer(Modifier.width(24.dp))
+                        SosColumn(session, onOpenSos, onActivateSos)
                     }
-                    Spacer(Modifier.width(24.dp))
-                    SosColumn(session, onOpenSos, onActivateSos)
                 }
             } else {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                        .verticalScroll(rememberScrollState()),
                 ) {
-                    Spacer(Modifier.height(8.dp))
-                    LocationCard(viewModel, session)
-                    Spacer(Modifier.height(20.dp))
-                    SosColumn(session, onOpenSos, onActivateSos)
-                    Spacer(Modifier.height(16.dp))
-                    ActionRow(onSurvey, onMap, onResponder)
-                    Spacer(Modifier.height(16.dp))
+                    HomeHeader(onSettings = { showSettings = true })
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Spacer(Modifier.height(8.dp))
+                        LocationCard(viewModel, session)
+                        Spacer(Modifier.height(20.dp))
+                        SosColumn(session, onOpenSos, onActivateSos)
+                        Spacer(Modifier.height(16.dp))
+                        ActionRow(onSurvey, onMap, onResponder)
+                        Spacer(Modifier.height(16.dp))
+                    }
                 }
             }
         }
@@ -189,7 +184,7 @@ private fun SosColumn(
                 Text(
                     "SOS ${session.code} is live. Tap to open it.",
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    color = Gold,
+                    color = Action,
                 )
             }
         }
@@ -216,11 +211,11 @@ private fun LocationCard(viewModel: HomeViewModel, session: SosSnapshot) {
             Text("Estimated room", color = PaperDim, style = MaterialTheme.typography.labelLarge)
             when {
                 session.active && session.roomName != null -> {
-                    Text(session.roomName, style = MaterialTheme.typography.headlineMedium)
+                    Text(session.roomName, style = MaterialTheme.typography.titleLarge)
                     Text(
                         "${confidencePercent(session.confidence)} confidence",
                         color = Moss,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
                 viewModel.sampleCount == 0 -> {
@@ -238,11 +233,11 @@ private fun LocationCard(viewModel: HomeViewModel, session: SosSnapshot) {
                     )
                 }
                 prediction.known -> {
-                    Text(prediction.roomName ?: "Unknown", style = MaterialTheme.typography.headlineMedium)
+                    Text(prediction.roomName ?: "Unknown", style = MaterialTheme.typography.titleLarge)
                     Text(
                         "${confidencePercent(prediction.confidence)} confidence",
                         color = Moss,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
                 else -> {
@@ -256,7 +251,7 @@ private fun LocationCard(viewModel: HomeViewModel, session: SosSnapshot) {
             if (session.active && session.updatedAt > 0L) {
                 Text(
                     "SOS estimate ${session.roomName ?: "pending"} · ${ago(session.updatedAt)}",
-                    color = Gold,
+                    color = Action,
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -271,10 +266,36 @@ private fun LocationCard(viewModel: HomeViewModel, session: SosSnapshot) {
                             selected = room.id == viewModel.settings.demoStandingRoomId,
                             onClick = { viewModel.standIn(room.id) },
                             label = { Text(room.name) },
+                            shape = RoomChipShape,
+                            colors = roomFilterChipColors(),
+                            border = roomFilterChipBorder(room.id == viewModel.settings.demoStandingRoomId),
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun HomeHeader(onSettings: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                "ROOM SENSE",
+                color = Action,
+                style = MaterialTheme.typography.labelLarge,
+                letterSpacing = 2.sp,
+            )
+            Text("Find the room. Then call.", style = MaterialTheme.typography.headlineMedium)
+        }
+        IconButton(onClick = onSettings) {
+            Icon(Icons.Outlined.Settings, contentDescription = "Settings")
         }
     }
 }
@@ -285,10 +306,31 @@ private fun ActionRow(
     onMap: () -> Unit,
     onResponder: () -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-        ActionCard("Survey", "Fingerprint rooms", Icons.Outlined.Wifi, onSurvey, Modifier.weight(1f))
-        ActionCard("Map", "Draw the floor", Icons.Outlined.Map, onMap, Modifier.weight(1f))
-        ActionCard("Listen", "Nearby SOS", Icons.Outlined.Wifi, onResponder, Modifier.weight(1f))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        ActionCard(
+            "Survey",
+            "Fingerprint rooms",
+            Icons.Outlined.Wifi,
+            onSurvey,
+            Modifier.weight(1f).height(132.dp),
+        )
+        ActionCard(
+            "Map",
+            "Draw the floor",
+            Icons.Outlined.Map,
+            onMap,
+            Modifier.weight(1f).height(132.dp),
+        )
+        ActionCard(
+            "Listen",
+            "Nearby SOS",
+            Icons.Outlined.Wifi,
+            onResponder,
+            Modifier.weight(1f).height(132.dp),
+        )
     }
 }
 
@@ -306,10 +348,22 @@ private fun ActionCard(
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(icon, contentDescription = null, tint = Gold)
-            Text(title, fontWeight = FontWeight.Medium)
-            Text(subtitle, color = PaperDim, style = MaterialTheme.typography.bodySmall)
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(icon, contentDescription = null, tint = Action)
+            Text(title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                subtitle,
+                color = PaperDim,
+                style = MaterialTheme.typography.bodySmall,
+                minLines = 2,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -351,6 +405,9 @@ private fun SettingsSheet(
                         selected = room.id == settings.demoStandingRoomId,
                         onClick = { onStand(room.id) },
                         label = { Text(room.name) },
+                        shape = RoomChipShape,
+                        colors = roomFilterChipColors(),
+                        border = roomFilterChipBorder(room.id == settings.demoStandingRoomId),
                     )
                 }
             }
@@ -380,9 +437,13 @@ private fun SettingRow(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(title, fontWeight = FontWeight.Medium)
+            Text(title, fontWeight = FontWeight.SemiBold)
             Text(body, color = PaperDim, style = MaterialTheme.typography.bodyMedium)
         }
-        Switch(checked = checked, onCheckedChange = onChecked)
+        Switch(
+            checked = checked,
+            onCheckedChange = onChecked,
+            colors = roomSwitchColors(),
+        )
     }
 }

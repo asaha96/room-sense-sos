@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -29,12 +30,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import edu.gatech.cs8803.roomsense.ui.theme.Paper
+import edu.gatech.cs8803.roomsense.ui.theme.ActionDanger
 import edu.gatech.cs8803.roomsense.ui.theme.Signal
+import edu.gatech.cs8803.roomsense.ui.theme.White
 import kotlinx.coroutines.delay
 import android.view.HapticFeedbackConstants
 
 private const val HOLD_NANOS = 1_100_000_000f
+private val SignalTrack = Color(0xFFF4CCC9)
 
 @Composable
 fun HoldToActivateButton(
@@ -81,28 +84,34 @@ fun HoldToActivateButton(
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.matchParentSize()) {
-            val stroke = 12.dp.toPx()
+            val stroke = 14.dp.toPx()
             val inset = stroke / 2f
             val arcSize = Size(size.width - stroke, size.height - stroke)
             val topLeft = Offset(inset, inset)
             drawArc(
-                color = Paper.copy(alpha = 0.18f),
+                color = SignalTrack,
                 startAngle = -90f,
                 sweepAngle = 360f,
                 useCenter = false,
                 topLeft = topLeft,
                 size = arcSize,
-                style = Stroke(width = stroke, cap = StrokeCap.Round),
+                style = Stroke(width = stroke, cap = StrokeCap.Butt),
             )
-            drawArc(
-                color = Paper,
-                startAngle = -90f,
-                sweepAngle = 360f * progress,
-                useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = Stroke(width = stroke, cap = StrokeCap.Round),
-            )
+            if (progress > 0f) {
+                val closed = progress >= 1f
+                drawArc(
+                    color = ActionDanger,
+                    startAngle = -90f,
+                    sweepAngle = 360f * progress,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(
+                        width = stroke,
+                        cap = if (closed) StrokeCap.Butt else StrokeCap.Round,
+                    ),
+                )
+            }
         }
         Surface(
             modifier = Modifier
@@ -115,11 +124,11 @@ fun HoldToActivateButton(
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     text = "SOS",
-                    color = Paper,
-                    fontSize = 42.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 2.sp,
-                    style = MaterialTheme.typography.headlineLarge,
+                    color = White,
+                    fontSize = 46.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp,
+                    fontFamily = MaterialTheme.typography.headlineLarge.fontFamily,
                 )
             }
         }

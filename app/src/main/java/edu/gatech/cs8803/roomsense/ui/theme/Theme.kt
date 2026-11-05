@@ -1,64 +1,151 @@
+@file:OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+
 package edu.gatech.cs8803.roomsense.ui.theme
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Typography
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import edu.gatech.cs8803.roomsense.R
 
-val Ink = Color(0xFF12171C)
-val InkRaised = Color(0xFF1C242C)
-val InkHigh = Color(0xFF27313B)
-val Paper = Color(0xFFF4EFE6)
-val PaperDim = Color(0xFFC9C2B6)
-val Signal = Color(0xFFE23B2F)
-val Gold = Color(0xFFC6A15B)
-val Moss = Color(0xFF8FCBB0)
-val Line = Color(0xFF33404C)
+val Ink = Color(0xFFF7F8FA)
+val InkRaised = Color(0xFFFFFFFF)
+val InkHigh = Color(0xFFEDF0F4)
+val Paper = Color(0xFF17212F)
+val PaperDim = Color(0xFF526071)
+val Signal = Color(0xFFDC2F2A)
+val Action = Color(0xFF2457A7)
+val ActionDanger = Color(0xFFB32622)
+val Gold = Color(0xFF7C3A12)
+val Moss = Color(0xFF0F6B3C)
+val Line = Color(0xFFCBD2DC)
+val MapSurface = Color(0xFFEEF1F5)
+val White = Color(0xFFFFFFFF)
 
-private val Colors = darkColorScheme(
-    primary = Signal,
-    onPrimary = Color.White,
-    secondary = Gold,
-    onSecondary = Ink,
+val RoomButtonShape = RoundedCornerShape(24.dp)
+val RoomFieldShape = RoundedCornerShape(16.dp)
+val RoomChipShape = RoundedCornerShape(16.dp)
+
+private val Colors = lightColorScheme(
+    primary = Action,
+    onPrimary = White,
+    primaryContainer = Action,
+    onPrimaryContainer = White,
+    secondary = Action,
+    onSecondary = White,
+    secondaryContainer = Action,
+    onSecondaryContainer = White,
     background = Ink,
     onBackground = Paper,
     surface = InkRaised,
     onSurface = Paper,
     surfaceVariant = InkHigh,
     onSurfaceVariant = PaperDim,
-    error = Signal,
-    onError = Color.White,
     outline = Line,
+    error = ActionDanger,
+    onError = White,
+)
+
+private val SourceSans = FontFamily(
+    Font(R.font.source_sans_3, FontWeight.Normal, variationSettings = FontVariation.Settings(FontVariation.weight(400))),
+    Font(R.font.source_sans_3, FontWeight.Medium, variationSettings = FontVariation.Settings(FontVariation.weight(500))),
+    Font(R.font.source_sans_3, FontWeight.SemiBold, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
+    Font(R.font.source_sans_3, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
+)
+
+private fun TextStyle.asRoom(
+    weight: FontWeight,
+    size: Int,
+    line: Int,
+    tracking: Float = 0f,
+) = copy(
+    fontFamily = SourceSans,
+    fontWeight = weight,
+    fontSize = size.sp,
+    lineHeight = line.sp,
+    letterSpacing = tracking.sp,
 )
 
 private val BaseType = Typography()
 
 private val AppType = Typography(
-    displayLarge = BaseType.displayLarge.copy(fontWeight = FontWeight.SemiBold, letterSpacing = (-1).sp),
-    headlineLarge = BaseType.headlineLarge.copy(fontWeight = FontWeight.SemiBold, letterSpacing = (-0.5).sp),
-    headlineMedium = BaseType.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
-    titleLarge = BaseType.titleLarge.copy(fontWeight = FontWeight.Medium),
-    bodyLarge = BaseType.bodyLarge.copy(lineHeight = 24.sp),
-    bodyMedium = BaseType.bodyMedium.copy(lineHeight = 20.sp),
-    labelLarge = BaseType.labelLarge.copy(letterSpacing = 0.6.sp, fontWeight = FontWeight.Medium),
+    displayLarge = BaseType.displayLarge.asRoom(FontWeight.Bold, 34, 40, -0.6f),
+    headlineLarge = BaseType.headlineLarge.asRoom(FontWeight.Bold, 34, 40, -0.6f),
+    headlineMedium = BaseType.headlineMedium.asRoom(FontWeight.Bold, 34, 40, -0.6f),
+    headlineSmall = BaseType.headlineSmall.asRoom(FontWeight.Bold, 30, 38, -0.4f),
+    titleLarge = BaseType.titleLarge.asRoom(FontWeight.SemiBold, 30, 38, -0.3f),
+    titleMedium = BaseType.titleMedium.asRoom(FontWeight.SemiBold, 16, 22),
+    bodyLarge = BaseType.bodyLarge.asRoom(FontWeight.Normal, 16, 24),
+    bodyMedium = BaseType.bodyMedium.asRoom(FontWeight.Normal, 16, 24),
+    bodySmall = BaseType.bodySmall.asRoom(FontWeight.Normal, 14, 20),
+    labelLarge = BaseType.labelLarge.asRoom(FontWeight.SemiBold, 14, 20, 1.1f),
+    labelMedium = BaseType.labelMedium.asRoom(FontWeight.SemiBold, 14, 20, 1.1f),
 )
 
-val CodeFamily = FontFamily.Monospace
-
 private val AppShapes = Shapes(
-    small = RoundedCornerShape(8.dp),
-    medium = RoundedCornerShape(14.dp),
-    large = RoundedCornerShape(22.dp),
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoomFieldShape,
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(28.dp),
+    extraLarge = RoundedCornerShape(28.dp),
+)
+
+fun Modifier.roomButtonHeight(): Modifier = height(48.dp)
+
+@Composable
+fun roomOutlinedBorder(color: Color = Action) = BorderStroke(1.dp, color)
+
+@Composable
+fun roomOutlinedColors(contentColor: Color = Action) = ButtonDefaults.outlinedButtonColors(
+    contentColor = contentColor,
+)
+
+@Composable
+fun roomFilterChipColors() = FilterChipDefaults.filterChipColors(
+    containerColor = InkHigh,
+    labelColor = Paper,
+    iconColor = Paper,
+    selectedContainerColor = Action,
+    selectedLabelColor = White,
+    selectedLeadingIconColor = White,
+)
+
+@Composable
+fun roomFilterChipBorder(selected: Boolean) = FilterChipDefaults.filterChipBorder(
+    enabled = true,
+    selected = selected,
+    borderColor = Line,
+    selectedBorderColor = Action,
+    borderWidth = 1.dp,
+    selectedBorderWidth = 1.dp,
+)
+
+@Composable
+fun roomSwitchColors() = SwitchDefaults.colors(
+    checkedThumbColor = White,
+    checkedTrackColor = Action,
+    checkedBorderColor = Action,
+    uncheckedThumbColor = Paper,
+    uncheckedTrackColor = InkHigh,
+    uncheckedBorderColor = Line,
 )
 
 @Composable

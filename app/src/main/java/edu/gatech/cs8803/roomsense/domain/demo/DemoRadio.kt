@@ -31,7 +31,7 @@ object DemoRadio {
         DemoRoom(
             id = "atrium",
             name = "Atrium",
-            color = 0xFFC6A15B.toInt(),
+            color = 0xFF7C3A12.toInt(),
             x = 0.06f,
             y = 0.08f,
             width = 0.42f,
@@ -41,7 +41,7 @@ object DemoRadio {
         DemoRoom(
             id = "studio",
             name = "Studio",
-            color = 0xFF3F8F8A.toInt(),
+            color = 0xFF2A7570.toInt(),
             x = 0.52f,
             y = 0.08f,
             width = 0.42f,
@@ -51,7 +51,7 @@ object DemoRadio {
         DemoRoom(
             id = "office",
             name = "Office",
-            color = 0xFFD4654A.toInt(),
+            color = 0xFFE06A4F.toInt(),
             x = 0.06f,
             y = 0.54f,
             width = 0.42f,
@@ -61,7 +61,7 @@ object DemoRadio {
         DemoRoom(
             id = "corridor",
             name = "Corridor",
-            color = 0xFF6E8CA0.toInt(),
+            color = 0xFF6A8496.toInt(),
             x = 0.52f,
             y = 0.54f,
             width = 0.42f,

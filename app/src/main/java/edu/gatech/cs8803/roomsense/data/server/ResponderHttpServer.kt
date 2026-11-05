@@ -101,6 +101,12 @@ class ResponderHttpServer(
                     "application/json; charset=utf-8",
                     statusJson(snapshot()).toByteArray(Charsets.UTF_8),
                 )
+                "/fonts/source-sans-3.ttf" -> {
+                    val bytes = appContext.resources.openRawResource(
+                        edu.gatech.cs8803.roomsense.R.font.source_sans_3,
+                    ).use { it.readBytes() }
+                    write(socket, 200, "OK", "font/ttf", bytes)
+                }
                 "/floorplan" -> {
                     val file = floorFile()
                     if (file == null) {

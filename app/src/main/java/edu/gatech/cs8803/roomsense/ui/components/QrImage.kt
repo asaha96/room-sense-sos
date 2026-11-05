@@ -15,7 +15,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
-import edu.gatech.cs8803.roomsense.ui.theme.Paper
+import edu.gatech.cs8803.roomsense.ui.theme.White
 
 @Composable
 fun QrImage(
@@ -27,14 +27,14 @@ fun QrImage(
     if (bitmap == null) return
     Box(
         modifier = modifier
+            .size(112.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Paper)
-            .size(168.dp),
+            .background(White),
     ) {
         Image(
             bitmap = bitmap,
             contentDescription = contentDescription,
-            modifier = Modifier.size(168.dp),
+            modifier = Modifier.size(112.dp),
             contentScale = ContentScale.Fit,
         )
     }
@@ -47,7 +47,7 @@ private fun encodeQr(payload: String): androidx.compose.ui.graphics.ImageBitmap?
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         for (x in 0 until size) {
             for (y in 0 until size) {
-                bitmap.setPixel(x, y, if (matrix.get(x, y)) 0xFF12171C.toInt() else 0xFFF4EFE6.toInt())
+                bitmap.setPixel(x, y, if (matrix.get(x, y)) 0xFF17212F.toInt() else 0xFFFFFFFF.toInt())
             }
         }
         bitmap.asImageBitmap()
