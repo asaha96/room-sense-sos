@@ -14,6 +14,7 @@ data class SosSnapshot(
     val accessPointCount: Int = 0,
     val ssid: String? = null,
     val password: String? = null,
+    val hotspotSecurity: String = "wpa2",
     val hotspotNote: String = "",
     val simulatedHotspot: Boolean = false,
     val bleNote: String = "",

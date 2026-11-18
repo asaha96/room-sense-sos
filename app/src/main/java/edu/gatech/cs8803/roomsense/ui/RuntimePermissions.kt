@@ -17,6 +17,15 @@ object RuntimePermissions {
         ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
     }
 
+    /** Asked before joining the caller's hotspot from the Listen screen. */
+    fun requiredForJoining(sdk: Int = Build.VERSION.SDK_INT): List<String> =
+        if (sdk >= 33) listOf(Manifest.permission.NEARBY_WIFI_DEVICES)
+        else listOf(Manifest.permission.ACCESS_FINE_LOCATION)
+
+    fun missingForJoining(context: Context): List<String> = requiredForJoining().filter {
+        ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+    }
+
     fun missing(context: Context): List<String> {
         return required().filter {
             ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED

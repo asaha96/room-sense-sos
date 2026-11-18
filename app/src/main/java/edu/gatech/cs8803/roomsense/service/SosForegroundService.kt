@@ -15,12 +15,16 @@ import edu.gatech.cs8803.roomsense.MainActivity
 import edu.gatech.cs8803.roomsense.R
 import edu.gatech.cs8803.roomsense.RoomSenseApplication
 import edu.gatech.cs8803.roomsense.data.ble.BleBroadcaster
+import edu.gatech.cs8803.roomsense.data.ble.FloorPlanCompressor
+import edu.gatech.cs8803.roomsense.data.ble.SosGattServer
 import edu.gatech.cs8803.roomsense.data.hotspot.HotspotController
 import edu.gatech.cs8803.roomsense.data.hotspot.HotspotStartResult
 import edu.gatech.cs8803.roomsense.data.server.LocalAddresses
 import edu.gatech.cs8803.roomsense.data.server.ResponderHttpServer
 import edu.gatech.cs8803.roomsense.data.server.ResponderSnapshot
 import edu.gatech.cs8803.roomsense.di.AppGraph
+import edu.gatech.cs8803.roomsense.domain.beacon.JoinInfo
+import edu.gatech.cs8803.roomsense.domain.beacon.MapWire
 import edu.gatech.cs8803.roomsense.domain.beacon.SosBeacon
 import edu.gatech.cs8803.roomsense.domain.incident.IncidentCodeGenerator
 import edu.gatech.cs8803.roomsense.domain.model.RoomModel
@@ -31,7 +35,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
@@ -43,10 +50,14 @@ class SosForegroundService : Service() {
     private lateinit var graph: AppGraph
     private lateinit var hotspot: HotspotController
     private lateinit var ble: BleBroadcaster
+    private lateinit var gattServer: SosGattServer
     private var server: ResponderHttpServer? = null
     private var loopJob: Job? = null
     private var running = false
     private var lastAdvert: String? = null
+
+    @Volatile
+    private var advertising = false
 
     @Volatile
     private var published = ResponderSnapshot()
@@ -59,6 +70,16 @@ class SosForegroundService : Service() {
         graph = (application as RoomSenseApplication).graph
         hotspot = HotspotController(this)
         ble = BleBroadcaster(this)
+        gattServer = SosGattServer(this) { _ ->
+            // Some stacks stop a connectable advert once a responder connects.
+            // Restart it so other responders can still discover this SOS.
+            scope.launch {
+                delay(400)
+                if (!running) return@launch
+                lastAdvert = null
+                advertise()
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -80,6 +101,7 @@ class SosForegroundService : Service() {
         running = false
         loopJob?.cancel()
         ble.stop()
+        gattServer.stop()
         hotspot.stop()
         server?.stop()
         scope.cancel()
@@ -105,10 +127,30 @@ class SosForegroundService : Service() {
         loopJob = scope.launch {
             latestRooms = graph.repository.roomsOnce()
             startServer()
+            gattServer.start()?.let { note -> Log.w(TAG, "Bluetooth map service: $note") }
+            gattServer.updateLayout(latestRooms.map(::wireRoom))
+            launch {
+                graph.session.state.collect { state ->
+                    publishJoinInfo(state)
+                    publishStatus(state)
+                }
+            }
+            launch {
+                graph.settings.state.map { it.floorPlanPath }.distinctUntilChanged().collect { path ->
+                    val bytes = withContext(Dispatchers.Default) {
+                        runCatching { FloorPlanCompressor.compress(path) }.getOrElse { ByteArray(0) }
+                    }
+                    Log.i(TAG, "Floor plan for Bluetooth: ${bytes.size} bytes")
+                    gattServer.updateFloor(bytes)
+                    publishStatus(graph.session.state.value)
+                }
+            }
             republish()
             launch {
                 graph.repository.observeRooms().collect { rooms ->
                     latestRooms = rooms
+                    gattServer.updateLayout(rooms.map(::wireRoom))
+                    publishStatus(graph.session.state.value)
                     republish()
                 }
             }
@@ -131,6 +173,9 @@ class SosForegroundService : Service() {
             while (isActive && running) {
                 delay(if (graph.settings.demoMode) DEMO_INTERVAL_MS else LIVE_INTERVAL_MS)
                 estimate()
+                // No-op once running; retries if permission or Bluetooth came late.
+                gattServer.start()
+                if (!advertising) lastAdvert = null
                 advertise()
             }
         }
@@ -195,6 +240,7 @@ class SosForegroundService : Service() {
                         it.copy(
                             ssid = result.ssid,
                             password = result.password,
+                            hotspotSecurity = result.security,
                             hotspotNote = result.note,
                             simulatedHotspot = false,
                         )
@@ -237,9 +283,57 @@ class SosForegroundService : Service() {
         if (key == lastAdvert) return
         lastAdvert = key
         ble.start(SosBeacon(code = code, ssid = ssid, room = room)) { note ->
+            advertising = note.startsWith("Broadcasting")
             graph.session.update { it.copy(bleNote = note) }
         }
     }
+
+    /** Keeps the GATT join characteristic in step with the hotspot and server. */
+    private fun publishJoinInfo(state: SosSnapshot) {
+        val code = state.code ?: return
+        val ssid = state.ssid ?: return
+        gattServer.updateJoin(
+            JoinInfo(
+                code = code,
+                ssid = ssid,
+                password = state.password,
+                security = state.hotspotSecurity,
+                port = state.port,
+                hosts = state.hotspotHosts,
+            ),
+        )
+    }
+
+    /** Pushes the live room estimate to responders connected over Bluetooth. */
+    private fun publishStatus(state: SosSnapshot) {
+        val code = state.code ?: return
+        val (layoutVersion, layoutSize) = gattServer.layoutInfo()
+        val (floorVersion, floorSize) = gattServer.floorInfo()
+        gattServer.updateStatus(
+            MapWire.Status(
+                code = code,
+                roomId = state.roomId,
+                roomName = state.roomName,
+                confidence = state.confidence,
+                updatedAt = state.updatedAt,
+                layoutVersion = layoutVersion,
+                layoutSize = layoutSize,
+                floorVersion = floorVersion,
+                floorSize = floorSize,
+                demoMode = state.demoMode,
+            ),
+        )
+    }
+
+    private fun wireRoom(room: RoomModel) = MapWire.WireRoom(
+        id = room.id,
+        name = room.name,
+        color = room.color,
+        x = room.x,
+        y = room.y,
+        width = room.width,
+        height = room.height,
+    )
 
     private fun republish() {
         val state = graph.session.state.value
@@ -264,7 +358,9 @@ class SosForegroundService : Service() {
         loopJob?.cancel()
         loopJob = null
         lastAdvert = null
+        advertising = false
         ble.stop()
+        gattServer.stop()
         hotspot.stop()
         server?.stop()
         server = null

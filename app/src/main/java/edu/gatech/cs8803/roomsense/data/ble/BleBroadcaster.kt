@@ -74,7 +74,9 @@ class BleBroadcaster(private val context: Context) {
         val settings = AdvertiseSettings.Builder()
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
             .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-            .setConnectable(false)
+            // Connectable so a responder can read hotspot details from
+            // JoinInfoGattServer. The flags this adds still fit in 31 bytes.
+            .setConnectable(true)
             .setTimeout(0)
             .build()
 

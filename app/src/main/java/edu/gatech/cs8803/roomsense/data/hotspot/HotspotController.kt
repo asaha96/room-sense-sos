@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
+import edu.gatech.cs8803.roomsense.domain.beacon.JoinInfo
 import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
@@ -19,6 +20,8 @@ sealed interface HotspotStartResult {
         val password: String?,
         val fixedSsidApplied: Boolean,
         val note: String,
+        /** One of the JoinInfo.SECURITY_* values, for responders joining over BLE. */
+        val security: String = JoinInfo.SECURITY_WPA2,
     ) : HotspotStartResult
 
     data class Failed(val note: String) : HotspotStartResult
@@ -96,6 +99,7 @@ class HotspotController(private val context: Context) {
                             password = password,
                             fixedSsidApplied = true,
                             note = "Hotspot name set to $FIXED_SSID.",
+                            security = securityOf(reservation, password),
                         ),
                     )
                 }
@@ -161,6 +165,7 @@ class HotspotController(private val context: Context) {
                         password = password,
                         fixedSsidApplied = false,
                         note = note,
+                        security = securityOf(reservation, password),
                     ),
                 )
             }
@@ -184,6 +189,21 @@ class HotspotController(private val context: Context) {
         synchronized(lock) {
             reservation?.let { runCatching { it.close() } }
             reservation = next
+        }
+    }
+
+    private fun securityOf(
+        reservation: WifiManager.LocalOnlyHotspotReservation,
+        password: String?,
+    ): String {
+        if (Build.VERSION.SDK_INT < 30) {
+            return if (password.isNullOrEmpty()) JoinInfo.SECURITY_OPEN else JoinInfo.SECURITY_WPA2
+        }
+        return when (reservation.softApConfiguration.securityType) {
+            SoftApConfiguration.SECURITY_TYPE_OPEN -> JoinInfo.SECURITY_OPEN
+            SoftApConfiguration.SECURITY_TYPE_WPA3_SAE_TRANSITION -> JoinInfo.SECURITY_WPA3_TRANSITION
+            SoftApConfiguration.SECURITY_TYPE_WPA3_SAE -> JoinInfo.SECURITY_WPA3
+            else -> JoinInfo.SECURITY_WPA2
         }
     }
 

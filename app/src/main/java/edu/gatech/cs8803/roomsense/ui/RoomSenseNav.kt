@@ -7,6 +7,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -24,7 +25,10 @@ import edu.gatech.cs8803.roomsense.ui.home.HomeViewModel
 import edu.gatech.cs8803.roomsense.ui.map.MapEditorScreen
 import edu.gatech.cs8803.roomsense.ui.map.MapViewModel
 import edu.gatech.cs8803.roomsense.ui.preview.ResponderPreviewScreen
+import edu.gatech.cs8803.roomsense.ui.responder.MapPhase
+import edu.gatech.cs8803.roomsense.ui.responder.RemoteMapScreen
 import edu.gatech.cs8803.roomsense.ui.responder.ResponderRoute
+import edu.gatech.cs8803.roomsense.ui.responder.ResponderViewModel
 import edu.gatech.cs8803.roomsense.ui.sos.SosScreen
 import edu.gatech.cs8803.roomsense.ui.survey.SurveyScreen
 import edu.gatech.cs8803.roomsense.ui.survey.SurveyViewModel
@@ -47,9 +51,10 @@ fun RoomSenseNav(graph: AppGraph) {
         }
     }
 
-    BackHandler(enabled = screen != "home") {
+    BackHandler(enabled = screen != "home" && screen != "responder-map" && screen != "remote-map") {
         screen = if (screen == "preview") "sos" else "home"
     }
+
 
     when (screen) {
         "survey" -> {
@@ -72,7 +77,52 @@ fun RoomSenseNav(graph: AppGraph) {
                 screen = "preview"
             },
         )
-        "responder" -> ResponderRoute(graph, onBack = { screen = "home" })
+        "responder" -> ResponderRoute(
+            graph,
+            onBack = { screen = "home" },
+            onOpenMap = { screen = "responder-map" },
+            onOpenRemote = { screen = "remote-map" },
+        )
+        "remote-map" -> {
+            val model: ResponderViewModel = viewModel(factory = viewModelFactory { ResponderViewModel(graph) })
+            val session = model.remote
+            val backToListen = {
+                model.closeRemote()
+                screen = "responder"
+            }
+            BackHandler(onBack = backToListen)
+            if (session == null) {
+                LaunchedEffect(Unit) { screen = "responder" }
+            } else {
+                RemoteMapScreen(
+                    session = session,
+                    onBack = backToListen,
+                    onRetry = model::retryRemote,
+                    onUseHotspot = {
+                        model.useHotspotInstead()
+                        screen = "responder"
+                    },
+                )
+            }
+        }
+        "responder-map" -> {
+            // Activity-scoped, so this is the same instance the Listen screen uses.
+            val model: ResponderViewModel = viewModel(factory = viewModelFactory { ResponderViewModel(graph) })
+            val link = model.mapLink
+            val backToListen = {
+                model.closeMap()
+                screen = "responder"
+            }
+            BackHandler(onBack = backToListen)
+            // Lost hotspot or a reset: go back so the incident card shows retry options.
+            LaunchedEffect(link.phase) {
+                if (link.phase != MapPhase.Ready) screen = "responder"
+            }
+            val url = link.url
+            if (link.phase == MapPhase.Ready && url != null) {
+                ResponderPreviewScreen(url = url, onBack = backToListen)
+            }
+        }
         "preview" -> ResponderPreviewScreen(url = previewUrl, onBack = { screen = "sos" })
         else -> {
             val model: HomeViewModel = viewModel(factory = viewModelFactory { HomeViewModel(graph) })

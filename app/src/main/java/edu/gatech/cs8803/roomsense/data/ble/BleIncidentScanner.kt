@@ -1,5 +1,6 @@
 package edu.gatech.cs8803.roomsense.data.ble
 
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
@@ -20,6 +21,8 @@ data class NearbyIncident(
     val ssid: String,
     val rssi: Int,
     val lastSeenMillis: Long,
+    /** The advertiser, so a responder can read hotspot details over GATT. */
+    val device: BluetoothDevice? = null,
 )
 
 class BleIncidentScanner(private val context: Context) {
@@ -90,6 +93,7 @@ class BleIncidentScanner(private val context: Context) {
             ssid = beacon.ssid,
             rssi = result.rssi,
             lastSeenMillis = System.currentTimeMillis(),
+            device = result.device,
         )
         _incidents.update { current ->
             (current.filter { it.code != seen.code } + seen).sortedByDescending { it.rssi }
