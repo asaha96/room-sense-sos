@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
@@ -22,19 +23,20 @@ fun QrImage(
     payload: String,
     modifier: Modifier = Modifier,
     contentDescription: String = "QR code",
+    size: Dp = 112.dp,
 ) {
     val bitmap = remember(payload) { encodeQr(payload) }
     if (bitmap == null) return
     Box(
         modifier = modifier
-            .size(112.dp)
+            .size(size)
             .clip(RoundedCornerShape(12.dp))
             .background(White),
     ) {
         Image(
             bitmap = bitmap,
             contentDescription = contentDescription,
-            modifier = Modifier.size(112.dp),
+            modifier = Modifier.size(size),
             contentScale = ContentScale.Fit,
         )
     }

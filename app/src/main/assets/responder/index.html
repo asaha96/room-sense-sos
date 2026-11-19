@@ -154,6 +154,77 @@
     document.getElementById("when").textContent = ago(latest.updatedAt);
   }
 
+  function textNode(x, y, value, size, weight) {
+    var node = el("text", {
+      x: x,
+      y: y,
+      fill: "#ffffff",
+      "font-size": size,
+      "font-family": "Source Sans 3, sans-serif",
+      "font-weight": weight
+    });
+    node.textContent = value;
+    return node;
+  }
+
+  function drawRoom(svg, room, here) {
+    var x = room.x * 100;
+    var y = room.y * 100;
+    var w = room.w * 100;
+    var h = room.h * 100;
+    var fill = room.color || "#6a8496";
+    var shape = { x: x, y: y, width: w, height: h, rx: 4.5 };
+    if (here) {
+      svg.appendChild(el("rect", {
+        x: shape.x, y: shape.y, width: shape.width, height: shape.height, rx: shape.rx,
+        fill: "none",
+        stroke: "#17212f",
+        "stroke-width": "5",
+        "stroke-linejoin": "round"
+      }));
+      svg.appendChild(el("rect", {
+        x: shape.x, y: shape.y, width: shape.width, height: shape.height, rx: shape.rx,
+        fill: fill,
+        stroke: "#ffffff",
+        "stroke-width": "3.1",
+        "stroke-linejoin": "round"
+      }));
+    } else {
+      svg.appendChild(el("rect", {
+        x: shape.x, y: shape.y, width: shape.width, height: shape.height, rx: shape.rx,
+        fill: fill,
+        "fill-opacity": "0.92",
+        stroke: fill,
+        "stroke-width": "0.45"
+      }));
+    }
+    svg.appendChild(textNode(x + 1.5, y + 5, room.name || "", "3.4", "600"));
+    if (!here || w < 24 || h < 16) return;
+    var badgeX = x + 1.4;
+    var badgeY = y + 6.6;
+    var badgeW = Math.min(22, w - 2.8);
+    var badgeH = 5;
+    svg.appendChild(el("rect", {
+      x: badgeX,
+      y: badgeY,
+      width: badgeW,
+      height: badgeH,
+      rx: 1.2,
+      fill: "#17212f"
+    }));
+    var hereLabel = el("text", {
+      x: badgeX + 1.2,
+      y: badgeY + badgeH / 2,
+      fill: "#ffffff",
+      "font-size": "2.6",
+      "font-family": "Source Sans 3, sans-serif",
+      "font-weight": "700",
+      "dominant-baseline": "central"
+    });
+    hereLabel.textContent = "You are here";
+    svg.appendChild(hereLabel);
+  }
+
   function paint(data) {
     latest = data;
     var code = (data.incidentCode || "").split("").join(" ");
@@ -182,30 +253,15 @@
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     var rooms = data.rooms || [];
     document.getElementById("empty").style.display = rooms.length ? "none" : "flex";
+    var current = null;
     rooms.forEach(function (room) {
-      var here = room.id && room.id === data.roomId;
-      svg.appendChild(el("rect", {
-        x: room.x * 100,
-        y: room.y * 100,
-        width: room.w * 100,
-        height: room.h * 100,
-        rx: 4.5,
-        fill: room.color || "#6a8496",
-        "fill-opacity": here ? "1" : "0.92",
-        stroke: here ? "#7c3a12" : room.color || "#6a8496",
-        "stroke-width": here ? "0.9" : "0.45"
-      }));
-      var label = el("text", {
-        x: room.x * 100 + 1.5,
-        y: room.y * 100 + 5,
-        fill: "#ffffff",
-        "font-size": "3.4",
-        "font-family": "Source Sans 3, sans-serif",
-        "font-weight": "600"
-      });
-      label.textContent = room.name || "";
-      svg.appendChild(label);
+      if (room.id && room.id === data.roomId) {
+        current = room;
+        return;
+      }
+      drawRoom(svg, room, false);
     });
+    if (current) drawRoom(svg, current, true);
   }
 
   function fail() {

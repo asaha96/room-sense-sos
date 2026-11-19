@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -154,11 +155,12 @@ fun SosScreen(
                     verticalAlignment = Alignment.Top,
                 ) {
                     if (ssid.isNullOrBlank()) {
-                        QrPlaceholder("Starting the hotspot")
+                        QrPlaceholder("Starting the hotspot", size = HotspotQrSize)
                     } else {
                         QrImage(
                             payload = WifiQr.payload(ssid, state.password),
                             contentDescription = "QR code to join $ssid",
+                            size = HotspotQrSize,
                         )
                     }
                     Column(
@@ -266,11 +268,13 @@ fun SosScreen(
     }
 }
 
+private val HotspotQrSize = 168.dp
+
 @Composable
-private fun QrPlaceholder(label: String) {
+private fun QrPlaceholder(label: String, size: Dp = 112.dp) {
     Box(
         modifier = Modifier
-            .size(112.dp)
+            .size(size)
             .background(InkHigh, RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center,
     ) {
